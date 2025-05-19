@@ -9,7 +9,7 @@ Lab results
 Rules and recommendations
 Gaps and sub-gaps
 
-Encounters
+Encounters <br>
 🚫 Implied relationships, not explicit
 Things like RULE_ID, SUB_GAP_ID, CLI_SK, GAP_ID suggest foreign key behavior, but that’s lost in this format.
 
