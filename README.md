@@ -4,10 +4,9 @@ SQL to MongoDB Schema recommendation walkthrough
 What can be improved with this schema (from a MongoDB or modern modeling lens)?<br>
 🚫 Over-flattened structure
 Everything is a top-level string column — even nested, related concepts like:
-
-Lab results
-Rules and recommendations
-Gaps and sub-gaps
+Lab results - 
+Rules and recommendations - 
+Gaps and sub-gaps - 
 
 Encounters <br>
 🚫 Implied relationships, not explicit
