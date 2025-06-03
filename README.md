@@ -97,12 +97,13 @@ MongoDB lets you represent the business objects as actual documents, not as 150+
 ```
 Why This MongoDB Schema Works Better?
 
-Field	Index Type	Why It Matters
-memberId, gap.status	Compound	Optimized for fetching open gaps per member, which is a common query for care coordination workflows and UI dashboards. This compound index allows fast filtering by both the patient (memberId) and gap state (status) — e.g., "Show me all open care gaps for this member."
-gap.suppression.isSuppressed	Single	Supports quick toggling between suppressed vs. active gaps. This is essential for excluding temporarily ignored gaps (e.g., member opted out or provider deferred), without scanning all documents.
-lab.loincCode, lab.result	Compound	Enables fast lookups on lab-based triggers. For example, detecting if a particular lab result (like HbA1c) justifies closing or opening a gap. These queries typically filter by both loincCode and the result value.
-engine.runId	Single	Used to track which engine run generated a given set of gaps. This is key for debugging, rollback, and analytics — e.g., "Which gaps came from the May 2025 batch job?"
-gap.subGaps.subGapId	Multikey	Allows precise querying of nested sub-gaps, like different parts of a colonoscopy quality measure. The multikey index ensures performance doesn’t degrade when sub-gaps vary in number or structure across records.
+| Field                          | Index Type | Why It Matters                                                                                                                                                                                                                                                                                  |
+|-------------------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `memberId`, `gap.status`      | Compound   | Optimized for fetching *open gaps per member*, a common care coordination task. Filters efficiently by patient ID and gap status — e.g., "Show me all open care gaps for this member."                                                                                                          |
+| `gap.suppression.isSuppressed`| Single     | Supports fast toggling between *suppressed* vs. *active* gaps. Essential for filtering out ignored or deferred gaps without scanning the whole document set.                                                                                                                                    |
+| `lab.loincCode`, `lab.result` | Compound   | Enables fast lookups on *lab-based triggers*. Useful for identifying lab results (like HbA1c) that open or close gaps. Queries typically require both code and result value.                                                                                                                    |
+| `engine.runId`                | Single     | Tracks which *engine run* generated each gap — useful for debugging, rollback, or batch analysis like "What gaps came from May 2025's run?"                                                                                                               |
+| `gap.subGaps.subGapId`        | Multikey   | Supports targeted querying of *nested sub-gaps*, such as detailed quality measures (e.g., colonoscopy prep + follow-up). The multikey index ensures performance holds even when sub-gaps vary across documents.                                           |
 
 
 
