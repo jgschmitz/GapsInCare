@@ -247,7 +247,7 @@ db.members.insertMany([
 ])
 ```
 
-// Index so the view’s filter pushes down and stays fast
+Create index so the view’s filter pushes down and stays fast
 ```
 db.members.createIndex({ LOB: 1, memberId: 1 })
 ```
