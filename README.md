@@ -270,13 +270,13 @@ Offshore can only read the redacted view
 ```
 db.createRole({
   role: "members_internal_reader",
-  privileges: [{ resource: { db: "gaps_demo", collection: "members" }, actions: ["find"] }],
+  privileges: [{ resource: { db: "Gaps_Demo", collection: "members" }, actions: ["find"] }],
   roles: []
 })
 
 db.createRole({
   role: "members_offshore_reader",
-  privileges: [{ resource: { db: "gaps_demo", collection: "members_offshore_v" }, actions: ["find"] }],
+  privileges: [{ resource: { db: "Gaps_Demo", collection: "members_offshore_v" }, actions: ["find"] }],
   roles: []
 })
 ```
@@ -286,13 +286,13 @@ db.createRole({
 db.createUser({
   user: "aliceInternal",
   pwd: "alicePwd!",
-  roles: [{ role: "members_internal_reader", db: "gaps_demo" }]
+  roles: [{ role: "members_internal_reader", db: "Gaps_Demo" }]
 })
 
 db.createUser({
   user: "bobOffshore",
   pwd: "bobPwd!",
-  roles: [{ role: "members_offshore_reader", db: "gaps_demo" }]
+  roles: [{ role: "members_offshore_reader", db: "Gaps_Demo" }]
 })
 ```
 4) Test (open two shells or authenticate sequentially)
@@ -306,7 +306,7 @@ db.members.find({}, { memberId: 1, LOB: 1, ssn: 1, dob: 1, address: 1, _id: 0 })
 /* You will see ALL LOBs and sensitive fields present */
 As Bob (offshore):
 ```
-use gaps_demo
+use Gaps_Demo
 db.auth("bobOffshore", "bobPwd!")
 ```
 // Base collection is blocked:
