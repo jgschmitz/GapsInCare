@@ -210,3 +210,123 @@ Start minimal; add more as query patterns stabilize.
 - Row counts match expectations after transform.
 - Spot-check a few records against source input.
 - Run smoke queries: by member, by open gap, by latest engine run, by lab code.
+
+## 5-minute demo: field + row restrictions (DB-enforced)
+0) Setup sample data
+```
+use gaps_demo
+db.members.drop()
+```
+Start Fresh here 
+```
+db.members.insertMany([
+  {
+    memberId: "M001",
+    LOB: "Medicaid",
+    name: { first: "Ava", last: "Nguyen" },
+    dob: ISODate("1990-02-10"),
+    ssn: "111-22-3333",
+    address: { line1: "1 Main St", city: "Austin", state: "TX" }
+  },
+  {
+    memberId: "M002",
+    LOB: "Commercial",
+    name: { first: "Ben", last: "Sanchez" },
+    dob: ISODate("1985-07-12"),
+    ssn: "222-33-4444",
+    address: { line1: "2 Pine Ave", city: "Chicago", state: "IL" }
+  },
+  {
+    memberId: "M003",
+    LOB: "Medicare",
+    name: { first: "Chloe", last: "Patel" },
+    dob: ISODate("1979-09-30"),
+    ssn: "333-44-5555",
+    address: { line1: "3 Oak Rd", city: "Denver", state: "CO" }
+  }
+])
+```
+
+// Index so the view’s filter pushes down and stays fast
+```
+db.members.createIndex({ LOB: 1, memberId: 1 })
+```
+1) Create a secure view for offshore users
+Hides Medicaid rows
+Removes sensitive fields (ssn, dob, address)
+```
+db.runCommand({
+  create: "members_offshore_v",
+  viewOn: "members",
+  pipeline: [
+    { $match: { LOB: { $ne: "Medicaid" } } },
+    { $unset: ["ssn", "dob", "address"] } // field-level redaction
+  ]
+})
+```
+2) Create roles
+Internal can read the base collection (full view)
+Offshore can only read the redacted view
+```
+db.createRole({
+  role: "members_internal_reader",
+  privileges: [{ resource: { db: "gaps_demo", collection: "members" }, actions: ["find"] }],
+  roles: []
+})
+
+db.createRole({
+  role: "members_offshore_reader",
+  privileges: [{ resource: { db: "gaps_demo", collection: "members_offshore_v" }, actions: ["find"] }],
+  roles: []
+})
+```
+
+3) Create demo users
+```
+db.createUser({
+  user: "aliceInternal",
+  pwd: "alicePwd!",
+  roles: [{ role: "members_internal_reader", db: "gaps_demo" }]
+})
+
+db.createUser({
+  user: "bobOffshore",
+  pwd: "bobPwd!",
+  roles: [{ role: "members_offshore_reader", db: "gaps_demo" }]
+})
+```
+4) Test (open two shells or authenticate sequentially)
+
+As Alice (internal):
+```
+use gaps_demo
+db.auth("aliceInternal", "alicePwd!")
+db.members.find({}, { memberId: 1, LOB: 1, ssn: 1, dob: 1, address: 1, _id: 0 }).pretty()
+```
+/* You will see ALL LOBs and sensitive fields present */
+As Bob (offshore):
+```
+use gaps_demo
+db.auth("bobOffshore", "bobPwd!")
+```
+// Base collection is blocked:
+```
+db.members.findOne()    // => Authorization error
+```
+// Redacted view is allowed:
+db.members_offshore_v.find({}, { memberId: 1, LOB: 1, ssn: 1, dob: 1, address: 1, _id: 0 }).pretty()
+/*
+Expected: Only Commercial + Medicare rows.
+Fields ssn/dob/address are ABSENT (removed by the DB).
+Medicaid rows are not returned at all.
+*/
+
+Optional proof: try to query for Medicaid via the view:
+```
+db.members_offshore_v.find({ LOB: "Medicaid" }).count()  // => 0
+```
+5) (Nice touch) Show it’s fast
+```
+db.members_offshore_v.explain("executionStats").find({ memberId: "M002" })
+```
+/* Look for IXSCAN on {LOB:1, memberId:1}; the $match was pushed down */
